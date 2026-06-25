@@ -67,14 +67,6 @@ const statusColorOf = (label) => colorInList(LIVE_SETTINGS.eventStatuses, label)
 // record's current value even if that option was later removed in Settings.
 const optsWith = (list, current) => (current && !list.includes(current) ? [current, ...list] : list);
 
-// Self-contained user list (no real auth). Swap for MSAL/Entra later if needed.
-const USERS = [
-  { id: "u1", name: "Jeremey Smith", initials: "JS", role: "Business Development" },
-  { id: "u2", name: "Dana Whitfield", initials: "DW", role: "Member Relations" },
-  { id: "u3", name: "Luis Romero", initials: "LR", role: "Community Outreach" },
-  { id: "u4", name: "Patrice Long", initials: "PL", role: "Branch Manager" },
-];
-
 /* ----------------------------- seed data ----------------------------- */
 const seedPartners = [
   { id: "p1", name: "York Manufacturing Co.", type: "Employer (SEG)", stage: "Active Partner", contact: "Dana Whitfield", email: "dwhitfield@yorkmfg.com", phone: "(717) 555-0182", employees: 340, notes: "Payroll deduction onboarding complete. Quarterly check-ins." },
@@ -215,8 +207,9 @@ function Modal({ title, onClose, children, onSave, saveLabel = "Save" }) {
 }
 
 /* ----------------------------- main app ----------------------------- */
-export default function MarketingBizDevApp() {
-  const [currentUser, setCurrentUser] = useState(null); // null until signed in
+export default function MarketingBizDevApp({ authUser, onSignOut }) {
+  // Identity comes from Entra ID (MSAL) via props. authUser: { name, initials, role, email }
+  const [currentUser] = useState(authUser);
   const [tab, setTab] = useState("dashboard");
   const [partners, setPartners] = useState(seedPartners);
   const [interactions, setInteractions] = useState(seedInteractions);
@@ -425,10 +418,7 @@ export default function MarketingBizDevApp() {
     { id: "settings", label: "Settings", icon: SettingsIcon },
   ];
 
-  // Sign-in gate — pick a user before the app loads
-  if (!currentUser) {
-    return <SignIn onPick={setCurrentUser} />;
-  }
+  // Auth is enforced by MSAL upstream (AuthenticatedTemplate), so currentUser is always present here.
 
   return (
     <div style={{ fontFamily: "'Archivo', 'Segoe UI', system-ui, sans-serif", background: BRAND.bg, minHeight: "100vh", color: BRAND.ink }}>
@@ -446,9 +436,9 @@ export default function MarketingBizDevApp() {
             <div style={{ fontSize: 11.5, color: "#c5e3f7" }}>{currentUser.role}</div>
           </div>
           <div style={{ width: 34, height: 34, borderRadius: "50%", background: BRAND.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, color: "#fff" }}>{currentUser.initials}</div>
-          <button onClick={() => setCurrentUser(null)} title="Switch user"
+          <button onClick={onSignOut} title="Sign out"
             style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 11px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.35)", background: "transparent", color: "#fff", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
-            <LogOut size={14} /> Switch
+            <LogOut size={14} /> Sign out
           </button>
         </div>
       </header>
@@ -813,39 +803,6 @@ export default function MarketingBizDevApp() {
       {modal?.kind === "newYear" && (
         <NewYearModal data={modal.data} existingYears={budgetYears} sourceYear={fiscalYear} onClose={() => setModal(null)} onCreate={startNewYear} />
       )}
-    </div>
-  );
-}
-
-/* ----------------------------- sign-in ----------------------------- */
-function SignIn({ onPick }) {
-  return (
-    <div style={{ fontFamily: "'Archivo', 'Segoe UI', system-ui, sans-serif", minHeight: "100vh", background: BRAND.navy, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600&display=swap');`}</style>
-      <div style={{ background: "#fff", borderRadius: 18, padding: 34, width: "100%", maxWidth: 420, boxShadow: "0 24px 70px rgba(0,0,0,0.35)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <div style={{ width: 44, height: 44, borderRadius: "50%", background: BRAND.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontStyle: "italic", fontSize: 20, color: "#fff", letterSpacing: -1 }}>hv</div>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: BRAND.navy }}>Heritage Valley FCU</div>
-            <div style={{ fontSize: 12.5, color: BRAND.sub, fontWeight: 500 }}>Marketing & Business Development</div>
-          </div>
-        </div>
-        <p style={{ fontSize: 14, color: BRAND.sub, margin: "16px 0 18px" }}>Select your name to sign in. Interactions you log will be stamped with your name and the date and time.</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          {USERS.map((u) => (
-            <button key={u.id} onClick={() => onPick(u)}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 11, border: `1px solid ${BRAND.line}`, background: "#fff", cursor: "pointer", textAlign: "left", transition: "background .15s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = BRAND.bg)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: BRAND.navy, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{u.initials}</div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: BRAND.ink }}>{u.name}</div>
-                <div style={{ fontSize: 12.5, color: BRAND.sub }}>{u.role}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
